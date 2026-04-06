@@ -1,0 +1,253 @@
+<div class="page-wrap">
+  <div class="app">
+    <div class="app-inner">
+      <div class="hero">
+        <div class="hero-icon" aria-hidden="true">⚕</div>
+        <div class="header">
+          <h1>Farmácia — busca rápida</h1>
+          <p>
+            Busca de medicamentos com <strong>busca binária</strong>: lista ordenada, poucas comparações e
+            resultado instantâneo (Angular 21).
+          </p>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button
+          type="button"
+          class="tab"
+          [class.active]="abaAtiva() === 'busca'"
+          role="tab"
+          [attr.aria-selected]="abaAtiva() === 'busca'"
+          (click)="mostrarAba('busca')"
+        >
+          Busca
+        </button>
+        <button
+          type="button"
+          class="tab"
+          [class.active]="abaAtiva() === 'estoque'"
+          role="tab"
+          [attr.aria-selected]="abaAtiva() === 'estoque'"
+          (click)="mostrarAba('estoque')"
+        >
+          Estoque
+        </button>
+        <button
+          type="button"
+          class="tab"
+          [class.active]="abaAtiva() === 'algoritmo'"
+          role="tab"
+          [attr.aria-selected]="abaAtiva() === 'algoritmo'"
+          (click)="mostrarAba('algoritmo')"
+        >
+          Como funciona
+        </button>
+      </div>
+
+      <div id="busca" class="section" [class.active]="abaAtiva() === 'busca'" role="tabpanel">
+        <div class="search-box">
+          <input
+            type="search"
+            [value]="termoConsulta()"
+            (input)="onDigitarBusca($any($event.target).value)"
+            (keydown.enter)="executarBusca()"
+            placeholder="Ex.: Dipirona, Amoxicilina, Ibuprofeno…"
+            autocomplete="off"
+          />
+          <button type="button" (click)="executarBusca()">Buscar</button>
+        </div>
+
+        @if (painelResultado(); as res) {
+          @if (res.encontrado) {
+            <div class="result-card found result-found">
+              <div class="result-title">Medicamento encontrado</div>
+              <div class="result-row-flex">
+                <div>
+                  <div class="result-headline">{{ res.item.nome }}</div>
+                  <div class="result-info">Categoria: {{ res.item.categoria }}</div>
+                  <div class="result-info">Preço: R$ {{ res.item.preco.toFixed(2) }}</div>
+                  <div class="result-info">Estoque: {{ res.item.quantidade }} unidades</div>
+                </div>
+                <div>
+                  <span [class]="'badge ' + classeBadgeLista(res.item.quantidade)">{{
+                    textoBadgeResultado(res.item.quantidade)
+                  }}</span>
+                </div>
+              </div>
+              <div class="steps-section">
+                <div class="steps-title">
+                  Passos da busca binária ({{ res.passos.length }} comparações)
+                </div>
+                <div class="step-row">
+                  <span class="step-idx">Passo</span>
+                  <span class="step-range">Intervalo</span>
+                  <span class="step-mid">Comparando com</span>
+                  <span class="step-dir">Decisão</span>
+                </div>
+                @for (p of res.passos; track p.numeroPasso) {
+                  @let d = rotuloDecisaoPasso(p.comparacao);
+                  <div class="step-row">
+                    <span class="step-idx">{{ p.numeroPasso }}</span>
+                    <span class="step-range">[{{ p.indiceInicio }}..{{ p.indiceFim }}]</span>
+                    <span class="step-mid">{{ p.nomeComparado }}</span>
+                    <span [class]="'step-dir ' + d.classe">{{ d.texto }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <div class="result-card not-found result-notfound">
+              <div class="result-title">Medicamento não encontrado</div>
+              <div class="result-info">
+                Não há nome exato igual a «{{ termoConsulta() }}» após
+                {{ res.passos.length }} comparações.
+              </div>
+              @if (sugestoesNaoEncontrado().length) {
+                <div class="steps-section">
+                  <div class="steps-title">Sugestões (nome contém o que você digitou)</div>
+                  @for (s of sugestoesNaoEncontrado(); track s.nome) {
+                    <div class="step-row suggestion-row" (click)="selecionarSugestao(s.nome)">
+                      <span class="suggestion-name">{{ s.nome }}</span>
+                      <span [class]="'badge ' + classeBadgeLista(s.quantidade)"
+                        >{{ s.quantidade }} un.</span
+                      >
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+
+      <div id="estoque" class="section" [class.active]="abaAtiva() === 'estoque'" role="tabpanel">
+        <p class="hint-text">
+          O estoque está em <strong>ordem alfabética</strong> — exigência da busca binária para descartar
+          metade do intervalo a cada passo.
+        </p>
+        <div class="legend">
+          <span class="legend-item"
+            ><span
+              class="dot"
+              style="background: var(--color-background-success); border: 1px solid var(--color-border-success)"
+            ></span
+            >Disponível</span
+          >
+          <span class="legend-item"
+            ><span
+              class="dot"
+              style="background: var(--color-background-warning); border: 1px solid var(--color-border-warning)"
+            ></span
+            >Estoque baixo</span
+          >
+          <span class="legend-item"
+            ><span
+              class="dot"
+              style="background: var(--color-background-danger); border: 1px solid var(--color-border-danger)"
+            ></span
+            >Sem estoque</span
+          >
+        </div>
+        <table class="stock-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Medicamento</th>
+              <th>Categoria</th>
+              <th>Qtd</th>
+              <th>Preço</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of estoque; track item.nome; let i = $index) {
+              <tr>
+                <td class="cell-muted">{{ i }}</td>
+                <td>{{ item.nome }}</td>
+                <td class="cell-secondary">{{ item.categoria }}</td>
+                <td>{{ item.quantidade }}</td>
+                <td>R$ {{ item.preco.toFixed(2) }}</td>
+                <td>
+                  <span [class]="'badge ' + classeBadgeLista(item.quantidade)">{{
+                    textoBadgeLista(item.quantidade)
+                  }}</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div id="algoritmo" class="section" [class.active]="abaAtiva() === 'algoritmo'" role="tabpanel">
+        <p class="hint-text">
+          A cada passo, comparamos o meio do intervalo com o nome procurado: se for “menor” alfabeticamente,
+          seguimos à direita; se for “maior”, à esquerda; se for igual, achamos o item. Com 500 itens, no
+          máximo cerca de 9 comparações — na busca linear, em média seriam centenas.
+        </p>
+        <div class="complexity-row">
+          <div class="complexity-card">
+            <div class="complexity-label">Busca binária (este sistema)</div>
+            <div class="complexity-val good">O(log n)</div>
+            <div class="complexity-sub">~9 passos para 500 itens</div>
+          </div>
+          <div class="complexity-card">
+            <div class="complexity-label">Busca linear (sequencial)</div>
+            <div class="complexity-val bad">O(n)</div>
+            <div class="complexity-sub">~250 passos em média para 500 itens</div>
+          </div>
+        </div>
+        <div class="algo-section-title">Visualização da última busca</div>
+        <div id="algo-vis">
+          @if (painelResultado(); as r) {
+            <p class="vis-intro">
+              Cada barra é um medicamento na ordem alfabética. A busca descarta metade do intervalo restante a
+              cada comparação.
+            </p>
+            <div class="legend" style="margin-bottom: 12px">
+              <span class="legend-item">
+                <span
+                  class="vis-legend-bar"
+                  style="
+                    background: linear-gradient(90deg, var(--color-background-tertiary), #cbd5e1);
+                  "
+                ></span>
+                Ainda candidato (largura ∝ estoque)
+              </span>
+              <span class="legend-item">
+                <span
+                  class="vis-legend-bar"
+                  style="
+                    background: var(--color-background-success);
+                    border: 1px solid var(--color-border-success);
+                  "
+                ></span>
+                Encontrado
+              </span>
+              <span class="legend-item">
+                <span class="vis-legend-bar vis-legend-muted"></span>
+                Eliminado pela busca
+              </span>
+            </div>
+            @for (item of estoque; track item.nome; let indice = $index) {
+              <div class="bar-row">
+                <div class="bar-label" [title]="item.nome">{{ primeiroNomeMedicamento(item.nome) }}</div>
+                <div class="bar-bg">
+                  <div
+                    [class]="'bar-fill ' + classeBarraVisual(indice)"
+                    [style.width.%]="larguraBarraPercentual(item, indice)"
+                  ></div>
+                </div>
+                <div class="bar-idx">{{ rotuloPassoNoIndice(indice) }}</div>
+              </div>
+            }
+          } @else {
+            <p class="algo-placeholder">
+              Faça uma busca na aba <strong>Busca</strong> para ver o algoritmo em ação.
+            </p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
