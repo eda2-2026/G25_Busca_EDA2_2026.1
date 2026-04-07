@@ -17,13 +17,17 @@ O projeto foi desenvolvido em **Angular** e inclui interface para busca, visuali
 
 ## Screenshots
 
+![Captura de tela 1](public/1.jpeg)
 
+![Captura de tela 2](public/2.jpeg)
+
+![Captura de tela 3](public/3.jpeg)
 
 ## Vídeo de apresentação
 
 Neste vídeo, apresentamos um resumo completo do trabalho desenvolvido, abordando os principais pontos discutidos ao longo do projeto.
 
-**[Assista no YouTube]()** _(substitua pelo link real do vídeo quando estiver publicado.)_
+**[Assista no YouTube](https://youtu.be/rocPoe7KyyE?si=X4LA1G7AOvCW5unn)**
 
 ## Instalação
 
